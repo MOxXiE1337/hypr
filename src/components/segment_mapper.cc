@@ -1,6 +1,5 @@
 #include <hypr/components/segment_mapper.h>
 
-#include <hypr/internal/segtype.h>
 
 namespace hypr
 {
@@ -14,95 +13,109 @@ namespace hypr
 	{
 		if (loaded_)
 		{
-			GetLogManager().Error(true, "imagebase can't be set after segments loaded");
+			GetLogManager().Error("imagebase can't be set after segments loaded");
 			return;
 		}
 		imagebase_ = imagebase;
 	}
 
-	void SegmentMapper::LoadNativeSegment(const Segment& segment)
+	bool SegmentMapper::LoadNativeSegment(const Segment& segment)
 	{
 		auto it = segments_.find(segment.ordinal);
 
 		if (it != segments_.end())
-			GetLogManager().Error(true, "seg{} is already loaded", segment.ordinal);
+			GetLogManager().Error("seg{} is already loaded", segment.ordinal);
 
 		segments_.insert({ segment.ordinal, segment });
+		return true;
 	}
 
-	void SegmentMapper::LoadNativeSegments(const std::vector<Segment>& segments)
+	bool SegmentMapper::LoadNativeSegments(const std::vector<Segment>& segments)
 	{
 		for (auto& segment : segments)
 			LoadNativeSegment(segment);
+		return true;
 	}
 
-	void SegmentMapper::LoadSegmentsFileFromMemory(const void* data, size_t size)
+	bool SegmentMapper::LoadSegmentsFileFromMemory(const void* data, size_t size)
 	{
-		LogManager& logman = GetLogManager();
+		/*LogManager& logman = GetLogManager();
 
 		if (size < sizeof(segs_t) + sizeof(seg_t) + 0x1000)
-			logman.Error(true, "invalid segments file (size too small)");
+		{
+			logman.Error("invalid segments file (size too small)");
+			return false;
+		}
 
 		const segs_t* header = reinterpret_cast<const segs_t*>(data);
 		
-		if(header->magic != kSegmentsFileMagicNumber)
-			logman.Error(true, "invalid segments file (wrong magic number)");
+		if (header->magic != kSegmentsFileMagicNumber)
+		{
+			logman.Error("invalid segments file (wrong magic number)");
+			return false;
+		}*/
 
+		return true;
 	}
 
-	void SegmentMapper::LoadSegmentsFileFromFile(const std::string& path)
+	bool SegmentMapper::LoadSegmentsFileFromFile(const std::string& path)
 	{
+		return true;
 	}
 
-	void SegmentMapper::LoadSegmentsFileFromResource(const std::string& name, const std::string& type)
+	bool SegmentMapper::LoadSegmentsFileFromResource(const std::string& name, const std::string& type)
 	{
-		LogManager& logman = GetLogManager();
+		//LogManager& logman = GetLogManager();
 
-		HRSRC src = FindResourceA(NULL, name.c_str(), type.c_str());
-		uint32_t size = 0;
-		HGLOBAL global = NULL;
+		//HRSRC src = FindResourceA(NULL, name.c_str(), type.c_str());
+		//uint32_t size = 0;
+		//HGLOBAL global = NULL;
 
-		if(src == NULL)
-			logman.Error(true, "failed to find resource \"{}\"", name);
+		//if (src == NULL)
+		//{
+		//	logman.Error("failed to find resource \"{}\"", name);
+		//	return false;
+		//}
 
-		size = SizeofResource(NULL, src);
+		//size = SizeofResource(NULL, src);
 
-		if (size == 0)
-			logman.Error(true, "failed to get resource \"{}\" size", name);
+		//if (size == 0)
+		//	logman.Error(true, "failed to get resource \"{}\" size", name);
 
-		global = LoadResource(NULL, src);
+		//global = LoadResource(NULL, src);
 
-		if(global == NULL)
-			logman.Error(true, "failed to load resource \"{}\"", name);
+		//if(global == NULL)
+		//	logman.Error(true, "failed to load resource \"{}\"", name);
 
-		const void* data = LockResource(global);
+		//const void* data = LockResource(global);
 
-		if(data == nullptr)
-			logman.Error(true, "failed to lock resource \"{}\"", name);
+		//if(data == nullptr)
+		//	logman.Error(true, "failed to lock resource \"{}\"", name);
 
-		LoadSegmentsFileFromMemory(data, size);
+		//LoadSegmentsFileFromMemory(data, size);
 
-		// anyway the process will exit if some error occurs in LoadSegmentsFileFromMemory, let system do the jobs
-		if(FreeResource(global) == FALSE)
-			logman.Error(true, "failed to free resource \"{}\"", name);
+		//// anyway the process will exit if some error occurs in LoadSegmentsFileFromMemory, let system do the jobs
+		//if(FreeResource(global) == FALSE)
+		//	logman.Error(true, "failed to free resource \"{}\"", name);
+		return true;
 	}
 	
 	uintptr_t SegmentMapper::TranslateAddress(segaddr_t address)
 	{
 		LogManager& logman = GetLogManager();
 
-		// search cache first
-		for (auto& cache : translate_cache_)
-		{
-			auto it = segments_.find(cache);
-			if (it == segments_.end())
-				logman.Error(true, "translate cache is corrupted");
+		//// search cache first
+		//for (auto& cache : translate_cache_)
+		//{
+		//	auto it = segments_.find(cache);
+		//	if (it == segments_.end())
+		//		logman.Error(true, "translate cache is corrupted");
 
-			Segment& seg = it->second;
+		//	Segment& seg = it->second;
 
-			if (address >= seg.segment_address && address < seg.segment_address + seg.size)
-				return seg.mapped_address + (address - seg.segment_address);
-		}
+		//	if (address >= seg.segment_address && address < seg.segment_address + seg.size)
+		//		return seg.mapped_address + (address - seg.segment_address);
+		//}
 
 		// search all segments
 		for (auto& [ordinal, seg] : segments_)
@@ -147,7 +160,10 @@ namespace hypr
 		{
 			auto it = segments_.find(cache);
 			if (it == segments_.end())
-				logman.Error(true, "translate cache is corrupted");
+			{
+				logman.Error("translate cache is corrupted");
+				return;
+			}
 
 			logman.Log("seg{} {:X} -> {:X}, {:X}", cache, it->second.segment_address, it->second.mapped_address, it->second.size);
 		}

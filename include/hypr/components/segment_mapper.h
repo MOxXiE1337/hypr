@@ -36,11 +36,11 @@ namespace hypr
 		segaddr_t GetImagebase() { return imagebase_; }
 		void SegImagebase(segaddr_t imagebase);
 
-		void LoadNativeSegment(const Segment& segment);
-		void LoadNativeSegments(const std::vector<Segment>& segments);
-		void LoadSegmentsFileFromMemory(const void* data, size_t size);
-		void LoadSegmentsFileFromFile(const std::string& path);
-		void LoadSegmentsFileFromResource(const std::string& name, const std::string& type);
+		bool LoadNativeSegment(const Segment& segment);
+		bool LoadNativeSegments(const std::vector<Segment>& segments);
+		bool LoadSegmentsFileFromMemory(const void* data, size_t size);
+		bool LoadSegmentsFileFromFile(const std::string& path);
+		bool LoadSegmentsFileFromResource(const std::string& name, const std::string& type);
 
 		uintptr_t TranslateAddress(segaddr_t address); // translate segment address to mapped address
 		uintptr_t TranslateOffset(ptrdiff_t offset); // equals TranslateAddress(GetImagebase() + offset)
