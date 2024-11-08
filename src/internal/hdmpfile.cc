@@ -2,7 +2,7 @@
 
 namespace hypr
 {
-	bool hdmp::load(const char* path)
+	bool hdmp::Load(const char* path)
 	{
 		if (buffer_)
 			return false;
@@ -26,10 +26,10 @@ namespace hypr
 		file.read(reinterpret_cast<char*>(buffer_.get()), size_);
 		file.close();
 
-		return parse();
+		return Parse();
 	}
 
-	bool hdmp::load(const void* data, size_t size)
+	bool hdmp::Load(const void* data, size_t size)
 	{
 		if (buffer_)
 			return false;
@@ -42,10 +42,10 @@ namespace hypr
 
 		memcpy(buffer_.get(), data, size);
 
-		return parse();
+		return Parse();
 	}
 
-	bool hdmp::parse()
+	bool hdmp::Parse()
 	{
 		if (!buffer_)
 			return false;
@@ -62,7 +62,7 @@ namespace hypr
 		return true;
 	}
 
-	void hdmp::get_modules(std::vector<hdmp_module>& out)
+	void hdmp::GetModules(std::vector<hdmp_module>& out)
 	{
 		if (!buffer_)
 			return;
@@ -89,7 +89,7 @@ namespace hypr
 		}
 	}
 
-	void hdmp::get_procs(const hdmp_module& module, std::vector<hdmp_proc>& out)
+	void hdmp::GetProcs(const hdmp_module& module, std::vector<hdmp_proc>& out)
 	{
 		if (!buffer_)
 			return;

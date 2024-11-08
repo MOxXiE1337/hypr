@@ -44,12 +44,14 @@ def get_modules(dmp):
     modules = []
     for module in dmp.modules.modules:
         module_name = os.path.basename(module.name)
+        if module_name.find('.exe') != -1: # skip exe
+            continue
         modules.append({'imagebase': module.baseaddress, 'imagesize': module.size, 'name': module_name, 'path': module.name})
     return modules
 
 def main():
     if len(sys.argv) != 3:
-        print("Usage: python dmpgen.py <path_to_dmp_file> <output_file_name>")
+        print("Usage: python hdmpgen.py <path_to_dmp_file> <output_file_name>")
         return
 
     dmp_file_path = sys.argv[1]

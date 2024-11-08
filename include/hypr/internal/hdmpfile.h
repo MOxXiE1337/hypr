@@ -5,7 +5,7 @@ namespace hypr
 {
 	constexpr uint32_t kHDMPFileMagicNumber = 'PMDH';
 
-#pragma pack(4)
+#pragma pack(1)
 	struct hdmpmod_t
 	{
 		uint32_t name; // offset from module_names
@@ -58,12 +58,13 @@ namespace hypr
 		size_t size_;
 
 		size_t module_num;
-	public:
-		bool load(const char* path);
-		bool load(const void* data, size_t size);
-		bool parse();
 
-		void get_modules(std::vector<hdmp_module>& out);
-		void get_procs(const hdmp_module& module, std::vector<hdmp_proc>& out);
+		bool Parse();
+	public:
+		bool Load(const char* path);
+		bool Load(const void* data, size_t size);
+
+		void GetModules(std::vector<hdmp_module>& out);
+		void GetProcs(const hdmp_module& module, std::vector<hdmp_proc>& out);
 	};
 }
