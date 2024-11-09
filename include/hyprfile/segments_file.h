@@ -36,10 +36,8 @@ namespace hyprfile
 		};
 	private:
 		uintptr_t                  base_address_;
-		std::shared_ptr<uint8_t[]> buffer_;
-		size_t                     size_;
 
-		bool CheckValidity();
+		bool CheckValidity() override;
 	public:
 		uintptr_t GetBaseAddress();
 		void GetSegments(std::vector<Segment>& out);

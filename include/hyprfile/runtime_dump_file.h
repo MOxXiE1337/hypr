@@ -53,12 +53,9 @@ namespace hyprfile
 		};
 
 	private:
-		std::shared_ptr<uint8_t[]> buffer_;
-		size_t size_;
-
-		bool CheckValidity();
+		bool CheckValidity() override;
 	public:
-		RuntimeDumpFile() : buffer_(), size_(0) {}
+		RuntimeDumpFile() : FileType() {}
 
 		void GetModuleRecords(std::vector<ModuleRecord>& out);
 		void GetProcRecords(const ModuleRecord& module, std::vector<ProcRecord>& out);
