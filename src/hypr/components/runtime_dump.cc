@@ -42,7 +42,7 @@ namespace hypr
         hyprutils::LogManager& logman = GetLogManager();
 
         hyprfile::RuntimeDumpFile runtime_dump_file{};
-        if (!runtime_dump_file.Load(data, size))
+        if (!runtime_dump_file.LoadFromMemory(data, size))
         {
             logman.Error("failed to parse runtime dump file");
             return false;

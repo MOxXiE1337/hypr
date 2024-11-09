@@ -43,7 +43,7 @@ namespace hypr
 		hyprutils::LogManager& logman = GetLogManager();
 		hyprfile::SegmentsFile segments_file{};
 
-		if (!segments_file.Load(data, size))
+		if (!segments_file.LoadFromMemory(data, size))
 		{
 			logman.Error("failed to parse segments file");
 			return false;

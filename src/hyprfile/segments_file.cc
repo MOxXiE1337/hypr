@@ -1,40 +1,15 @@
 #include <hyprfile/segments_file.h>
 #include <hyprutils/file.h>
+#include <hyprutils/resource.h>
 
 namespace hyprfile
 {
-    bool SegmentsFile::Load(const std::string& path)
-    {
-		if (buffer_)
-			return false;
-
-		buffer_ = hyprutils::ReadFileToMemory(path, &size_);
-
-		if (!buffer_)
-			return false;
-
-		return CheckValidity();
-    }
-
-	bool SegmentsFile::Load(const void* data, size_t size)
-	{
-		if (buffer_)
-			return false;
-
-		if (size < sizeof(hsegfile_t) + sizeof(hsegseg_t) + 0x100)
-			return false;
-
-		buffer_ = std::make_shared<uint8_t[]>(size);
-		size_ = size;
-
-		memcpy(buffer_.get(), data, size);
-
-		return CheckValidity();
-	}
-
 	bool SegmentsFile::CheckValidity()
 	{
 		if (!buffer_)
+			return false;
+
+		if (size_ < sizeof(hsegfile_t) + sizeof(hsegseg_t))
 			return false;
 
 		const char* data = reinterpret_cast<const char*>(buffer_.get());

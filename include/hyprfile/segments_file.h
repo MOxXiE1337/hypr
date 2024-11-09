@@ -23,7 +23,7 @@ namespace hyprfile
 	};
 #pragma pack()
 
-	class SegmentsFile
+	class SegmentsFile : public FileType
 	{
 	public:
 		struct Segment
@@ -41,10 +41,6 @@ namespace hyprfile
 
 		bool CheckValidity();
 	public:
-		bool IsLoaded() { return buffer_ ? true : false; }
-		bool Load(const std::string& path);
-		bool Load(const void* data, size_t size);
-
 		uintptr_t GetBaseAddress();
 		void GetSegments(std::vector<Segment>& out);
 	};

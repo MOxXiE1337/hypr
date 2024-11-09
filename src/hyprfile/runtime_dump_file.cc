@@ -1,41 +1,14 @@
 #include <hyprfile/runtime_dump_file.h>
 
-#include <hyprutils/file.h>
 
 namespace hyprfile
 {
-	bool RuntimeDumpFile::Load(const std::string& path)
-	{
-		if (buffer_)
-			return false;
-
-		buffer_ = hyprutils::ReadFileToMemory(path, &size_);
-
-		if (buffer_)
-			return false;
-
-		return CheckValidity();
-	}
-
-	bool RuntimeDumpFile::Load(const void* data, size_t size)
-	{
-		if (buffer_)
-			return false;
-
-		if (size < sizeof(hdmpfile_t) + sizeof(hdmpmod_t) + sizeof(hdmpproc_t))
-			return false;
-
-		buffer_ = std::make_shared<uint8_t[]>(size);
-		size_ = size;
-
-		memcpy(buffer_.get(), data, size);
-
-		return CheckValidity();
-	}
-
 	bool RuntimeDumpFile::CheckValidity()
 	{
 		if (!buffer_)
+			return false;
+
+		if (size_ < sizeof(hdmpfile_t) + sizeof(hdmpmod_t) + sizeof(hdmpproc_t))
 			return false;
 
 		const char* data = reinterpret_cast<const char*>(buffer_.get());
