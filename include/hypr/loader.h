@@ -10,14 +10,14 @@ namespace hypr
 	private:
 		hyprutils::LogManager    logman_;
 		RuntimeDump   runtime_dump_;
-		//SegmentMapper segment_mapper_;
+		SegmentMapper segment_mapper_;
 	public:
 		Loader() = delete;
 		Loader(const std::string& name);
 
 		hyprutils::LogManager& GetLogManager() { return logman_; }
 		RuntimeDump& GetRuntimeDump() { return runtime_dump_; }
-		//SegmentMapper& GetSegmentMapper() { return segment_mapper_; }
+		SegmentMapper& GetSegmentMapper() { return segment_mapper_; }
 
 	public:
 		virtual bool PrevMap() = 0;

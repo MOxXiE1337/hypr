@@ -1,5 +1,54 @@
 #pragma once
+#include "../hypr.h"
 #include "../loader_component.h"
+
+#include <hyprfile/segments_file.h>
+
+namespace hypr
+{
+	enum class SegmentMapperMode
+	{
+		kUnknown,
+		kStatic,
+		kDynamic
+	};
+
+	class SegmentMapper : public LoaderComponent
+	{
+	public:
+		struct Segment
+		{
+			uint32_t ordinal;
+			uintptr_t address;
+			size_t vsize;
+			size_t rsize;
+			std::shared_ptr<uint8_t[]> data;
+		};
+
+	private:
+		SegmentMapperMode mode_;
+		uintptr_t base_address_;
+		std::vector<Segment> segments_;
+		
+
+	public:
+		SegmentMapper() = delete;
+		SegmentMapper(Loader* loader);
+
+		uintptr_t GetBaseAddress() { return base_address_; }
+		void SetBaseAddress(uintptr_t address) { base_address_ = address; }
+
+		const std::vector<Segment>& GetSegments() { return segments_; }
+		
+		// manually load a segment, useful when u only need one segment ( in code like bin.h )
+		bool LoadNativeSegment(const hyprfile::SegmentsFile::Segment& segment);
+
+		// .hseg file
+		bool LoadSegmentsFileFromMemory(const void* data, size_t size);
+		bool LoadSegmentsFileFromFile(const std::string& path);
+		bool LoadSegmentsFileFromResource(uint32_t id, const std::string& type);
+	};
+}
 
 //namespace hypr
 //{

@@ -4,8 +4,8 @@ namespace hypr
 {
 	Loader::Loader(const std::string& name) : 
 		logman_(name),
-		runtime_dump_(this)
-		//segment_mapper_(this)
+		runtime_dump_(this),
+		segment_mapper_(this)
 	{
 
 	}

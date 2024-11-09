@@ -46,7 +46,14 @@ namespace hyprfile
 		if (header->segment_num == 0)
 			return false;
 
+		base_address_ = (uintptr_t)header->base_address;
+
 		return true;
+	}
+
+	uintptr_t SegmentsFile::GetBaseAddress()
+	{
+		return base_address_;
 	}
 
 	void SegmentsFile::GetSegments(std::vector<Segment>& out)

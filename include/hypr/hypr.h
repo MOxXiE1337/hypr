@@ -16,6 +16,7 @@
 
 namespace hypr
 {
+	// segaddr means the address in the old process
 	typedef uintptr_t segaddr_t;
 
 	inline bool InvokeStandardEntrypoint(uintptr_t address, uintptr_t imagebase)

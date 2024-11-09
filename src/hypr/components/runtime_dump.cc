@@ -10,6 +10,33 @@ namespace hypr
     {
     }
 
+    std::shared_ptr<const RuntimeDump::ProcRecord> RuntimeDump::FindProcRecord(segaddr_t address)
+    {
+        hyprutils::LogManager& logman = GetLogManager();
+
+        auto it = gprocs_.find(address);
+
+        if (it != gprocs_.end())
+        {
+            // delay load
+            std::shared_ptr<ProcRecord> proc = it->second;
+
+            if (proc->new_address == 0)
+            {
+                proc->new_address = reinterpret_cast<uintptr_t>(GetProcAddress(LoadLibraryA(proc->module->name.c_str()), proc->name.c_str()));
+                if (proc->new_address == 0)
+                {
+                    logman.Error("failed to load proc {}.{}", proc->module->name, proc->name);
+                    return {};
+                }
+            }
+
+            return proc;
+        }
+
+        return {};
+    }
+
     bool RuntimeDump::LoadRuntimeDumpFileFromMemory(const void* data, size_t size)
     {
         hyprutils::LogManager& logman = GetLogManager();
@@ -33,14 +60,14 @@ namespace hypr
                 
                 for (auto& hproc : procs)
                 {
-                    ProcRecord proc{
+                    std::shared_ptr<ProcRecord> proc = std::make_shared<ProcRecord>(
+                        mod,
                         hproc.ordinal,
-                        reinterpret_cast<uintptr_t>(GetProcAddress(LoadLibraryA(module.name), hproc.name)),
-                        hproc.name
-                    };
+                        0,
+                        hproc.name);
 
                     mod->procs.push_back(proc);
-                    //gprocs_[hproc.address] = proc;
+                    gprocs_[hproc.address] = proc;
                 }
                 modules_.push_back(mod);
                 

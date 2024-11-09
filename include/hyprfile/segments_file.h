@@ -35,6 +35,7 @@ namespace hyprfile
 			const uint8_t* data;
 		};
 	private:
+		uintptr_t                  base_address_;
 		std::shared_ptr<uint8_t[]> buffer_;
 		size_t                     size_;
 
@@ -44,6 +45,7 @@ namespace hyprfile
 		bool Load(const std::string& path);
 		bool Load(const void* data, size_t size);
 
+		uintptr_t GetBaseAddress();
 		void GetSegments(std::vector<Segment>& out);
 	};
 }

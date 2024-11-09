@@ -1,186 +1,98 @@
 #include <hypr/components/segment_mapper.h>
 
+#include <hyprutils/file.h>
+#include <hyprutils/resource.h>
 
 namespace hypr
 {
 	SegmentMapper::SegmentMapper(Loader* loader) : LoaderComponent(loader, "SegmentMapper"),
-		loaded_(false),
-		imagebase_(0)
+		mode_(SegmentMapperMode::kUnknown),
+		base_address_(0),
+		segments_()
 	{
 	}
 
-	void SegmentMapper::SegImagebase(segaddr_t imagebase)
+	bool SegmentMapper::LoadNativeSegment(const hyprfile::SegmentsFile::Segment& segment)
 	{
-		if (loaded_)
+		hyprutils::LogManager& logman = GetLogManager();
+		
+		std::shared_ptr<uint8_t[]> data = std::make_shared<uint8_t[]>(segment.rsize);
+
+		if (!data)
 		{
-			GetLogManager().Error("imagebase can't be set after segments loaded");
-			return;
+			logman.Error("failed to allocate memory while loading segment {}", segment.ordinal);
+			return false;
 		}
-		imagebase_ = imagebase;
-	}
 
-	bool SegmentMapper::LoadNativeSegment(const Segment& segment)
-	{
-		auto it = segments_.find(segment.ordinal);
+		memcpy(data.get(), segment.data, segment.rsize);
 
-		if (it != segments_.end())
-			GetLogManager().Error("seg{} is already loaded", segment.ordinal);
+		segments_.push_back(
+			{
+				segment.ordinal,
+				segment.address,
+				segment.vsize,
+				segment.rsize,
+				data
+			});
 
-		segments_.insert({ segment.ordinal, segment });
-		return true;
-	}
-
-	bool SegmentMapper::LoadNativeSegments(const std::vector<Segment>& segments)
-	{
-		for (auto& segment : segments)
-			LoadNativeSegment(segment);
 		return true;
 	}
 
 	bool SegmentMapper::LoadSegmentsFileFromMemory(const void* data, size_t size)
 	{
-		/*LogManager& logman = GetLogManager();
+		hyprutils::LogManager& logman = GetLogManager();
+		hyprfile::SegmentsFile segments_file{};
 
-		if (size < sizeof(segs_t) + sizeof(seg_t) + 0x1000)
+		if (!segments_file.Load(data, size))
 		{
-			logman.Error("invalid segments file (size too small)");
+			logman.Error("failed to parse segments file");
 			return false;
 		}
 
-		const segs_t* header = reinterpret_cast<const segs_t*>(data);
-		
-		if (header->magic != kSegmentsFileMagicNumber)
+		SetBaseAddress(segments_file.GetBaseAddress());
+
+		std::vector<hyprfile::SegmentsFile::Segment> segments;
+		segments_file.GetSegments(segments);
+
+		for (auto& segment : segments)
 		{
-			logman.Error("invalid segments file (wrong magic number)");
-			return false;
-		}*/
+			if (!LoadNativeSegment(segment))
+				return false;
+		}
 
 		return true;
 	}
 
 	bool SegmentMapper::LoadSegmentsFileFromFile(const std::string& path)
 	{
-		return true;
-	}
+		hyprutils::LogManager& logman = GetLogManager();
 
-	bool SegmentMapper::LoadSegmentsFileFromResource(const std::string& name, const std::string& type)
-	{
-		//LogManager& logman = GetLogManager();
+		size_t size = 0;
+		std::shared_ptr<uint8_t[]> buffer = hyprutils::ReadFileToMemory(path, &size);
 
-		//HRSRC src = FindResourceA(NULL, name.c_str(), type.c_str());
-		//uint32_t size = 0;
-		//HGLOBAL global = NULL;
-
-		//if (src == NULL)
-		//{
-		//	logman.Error("failed to find resource \"{}\"", name);
-		//	return false;
-		//}
-
-		//size = SizeofResource(NULL, src);
-
-		//if (size == 0)
-		//	logman.Error(true, "failed to get resource \"{}\" size", name);
-
-		//global = LoadResource(NULL, src);
-
-		//if(global == NULL)
-		//	logman.Error(true, "failed to load resource \"{}\"", name);
-
-		//const void* data = LockResource(global);
-
-		//if(data == nullptr)
-		//	logman.Error(true, "failed to lock resource \"{}\"", name);
-
-		//LoadSegmentsFileFromMemory(data, size);
-
-		//// anyway the process will exit if some error occurs in LoadSegmentsFileFromMemory, let system do the jobs
-		//if(FreeResource(global) == FALSE)
-		//	logman.Error(true, "failed to free resource \"{}\"", name);
-		return true;
-	}
-	
-	uintptr_t SegmentMapper::TranslateAddress(segaddr_t address)
-	{
-		LogManager& logman = GetLogManager();
-
-		//// search cache first
-		//for (auto& cache : translate_cache_)
-		//{
-		//	auto it = segments_.find(cache);
-		//	if (it == segments_.end())
-		//		logman.Error(true, "translate cache is corrupted");
-
-		//	Segment& seg = it->second;
-
-		//	if (address >= seg.segment_address && address < seg.segment_address + seg.size)
-		//		return seg.mapped_address + (address - seg.segment_address);
-		//}
-
-		// search all segments
-		for (auto& [ordinal, seg] : segments_)
+		if (!buffer || size == 0)
 		{
-			if (address >= seg.segment_address && address < seg.segment_address + seg.size)
-			{
-				if (translate_cache_.size() >= kSegmentMapperMaxTranslateCacheNumber)
-					translate_cache_.resize(kSegmentMapperMaxTranslateCacheNumber - 1);
-
-				if (!translate_cache_.empty())
-				{
-					if(translate_cache_.front() != ordinal)
-						translate_cache_.push_front(ordinal);
-				}
-				else
-				{
-					translate_cache_.push_front(ordinal);
-				}
-				return seg.mapped_address + (address - seg.segment_address);
-			}
+			logman.Error("failed to read segments file \"{}\"", path);
+			return false;
 		}
 
-		return 0;
+		return LoadSegmentsFileFromMemory(buffer.get(), size);
 	}
 
-	uintptr_t SegmentMapper::TranslateOffset(ptrdiff_t offset)
+	bool SegmentMapper::LoadSegmentsFileFromResource(uint32_t id, const std::string& type)
 	{
-		return TranslateAddress(imagebase_ + offset);
-	}
+		hyprutils::LogManager& logman = GetLogManager();
 
-	void SegmentMapper::PrintTranslateCache()
-	{
-		LogManager& logman = GetLogManager();
+		size_t size = 0;
+		std::shared_ptr<uint8_t[]> buffer = hyprutils::ReadResourceToMemory(id, type, &size);
 
-		if (translate_cache_.empty())
+		if (!buffer || size == 0)
 		{
-			return logman.Log("translate cache is empty");
+			logman.Error("failed to read segments file from resource {}", id);
+			return false;
 		}
 
-		logman.Log("translate cache view, max({})", kSegmentMapperMaxTranslateCacheNumber);
-		for (auto& cache : translate_cache_)
-		{
-			auto it = segments_.find(cache);
-			if (it == segments_.end())
-			{
-				logman.Error("translate cache is corrupted");
-				return;
-			}
-
-			logman.Log("seg{} {:X} -> {:X}, {:X}", cache, it->second.segment_address, it->second.mapped_address, it->second.size);
-		}
-	}
-
-	bool SegmentMapper::MapSegment(uint16_t ordinal)
-	{
-		return true;
-	}
-
-	bool SegmentMapper::MapSegments()
-	{
-		for (auto& [ordinal, seg] : segments_)
-		{
-			if (!MapSegment(ordinal))
-				return false;
-		}
-		return true;
+		return LoadSegmentsFileFromMemory(buffer.get(), size);
 	}
 }
+
