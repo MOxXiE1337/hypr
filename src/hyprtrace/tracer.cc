@@ -9,7 +9,7 @@ namespace hyprtrace
 
 		for (auto& module : modules)
 		{
-			starter.ReserveMemory(module.imagebase, module.imagesize, PAGE_EXECUTE_READWRITE, module.name);
+			starter.ReserveMemory(uintptr_t(module.imagebase), module.imagesize, PAGE_EXECUTE_READWRITE, module.name);
 		}
 	}
 }

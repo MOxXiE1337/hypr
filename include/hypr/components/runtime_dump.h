@@ -23,6 +23,8 @@ namespace hypr
 			uintptr_t imagebase;
 			size_t    imagesize;
 			std::vector<std::shared_ptr<ProcRecord>> procs;
+
+			ModuleRecord() : name(), imagebase(0), imagesize(0), procs() {}
 		};
 	private:
 		std::vector<std::shared_ptr<ModuleRecord>> modules_;

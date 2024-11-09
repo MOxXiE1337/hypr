@@ -58,6 +58,8 @@ namespace hyprfile
 
 		bool CheckValidity();
 	public:
+		RuntimeDumpFile() : buffer_(), size_(0) {}
+	
 		bool IsLoaded() { return buffer_ ? true : false; }
 		bool Load(const std::string& path);
 		bool Load(const void* data, size_t size);
