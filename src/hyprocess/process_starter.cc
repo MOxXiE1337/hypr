@@ -2,9 +2,9 @@
 
 namespace hyprocess
 {
-	void ProcessStarter::ReserveMemory(uintptr_t address, size_t size, uint32_t protect)
+	void ProcessStarter::ReserveMemory(uintptr_t address, size_t size, uint32_t protect, const std::string& comment)
 	{
-		memory_reservations_.push_back({ address,size,protect });
+		memory_reservations_.push_back({ address,size,protect,comment });
 	}
 
 	bool ProcessStarter::StartProcess()
@@ -61,7 +61,11 @@ namespace hyprocess
 
 			if (ptr == nullptr)
 			{
-				logman_.Error("failed to reserver memory {:X}:{:X}", reservation.address, reservation.size);
+				if(reservation.comment.empty())
+					logman_.Error("failed to reserver memory {:X}:{:X}", reservation.address, reservation.size);
+				else
+					logman_.Error("failed to reserver memory {:X}:{:X} ({})", reservation.address, reservation.size, reservation.comment);
+				
 				return false;
 			}
 		}

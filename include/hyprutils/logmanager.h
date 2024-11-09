@@ -1,8 +1,5 @@
 #pragma once
-#include <format>
-#include <string>
-#include <mutex>
-#include <iostream>
+#include "hyprutils.h"
 
 namespace hyprutils
 {

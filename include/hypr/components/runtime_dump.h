@@ -34,6 +34,6 @@ namespace hypr
 		// .hdmp file 
 		bool LoadRuntimeDumpFileFromMemory(const void* data, size_t size);
 		bool LoadRuntimeDumpFileFromFile(const std::string& path);
-		bool LoadRuntimeDumpFileFromResource(const std::string& name, const std::string& type);
+		bool LoadRuntimeDumpFileFromResource(uint32_t id, const std::string& type);
 	};
 }

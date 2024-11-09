@@ -1,7 +1,6 @@
 #pragma once
 
-#include <memory>
-#include <fstream>
+#include "hyprutils.h"
 
 namespace hyprutils
 {
@@ -13,7 +12,11 @@ namespace hyprutils
 		file.open(path, std::ios::binary);
 
 		if (!file.is_open())
+		{
+			if (readed_size)
+				*readed_size = 0;
 			return {};
+		}
 
 		file.seekg(0, std::ios::end);
 		size = file.tellg();
@@ -21,8 +24,12 @@ namespace hyprutils
 
 		std::shared_ptr<uint8_t[]> buffer = std::make_shared<uint8_t[]>(size);
 
-		if (!buffer)
+		if (!buffer || size == 0)
+		{
+			if (readed_size)
+				*readed_size = 0;
 			return {};
+		}
 
 		file.read(reinterpret_cast<char*>(buffer.get()), size);
 		file.close();

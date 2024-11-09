@@ -120,14 +120,14 @@ def main():
     
     with open(sys.argv[2], 'wb') as f:
         f.write(b'HDMP') # magic number
-        f.write(struct.pack('I', len(modules))) # module number
+        f.write(struct.pack('I', len(modules))) # module num
         f.write(struct.pack('III', 0, 0, 0)) # module name table offset, proc name table offset, proc table offset
         
         for module in modules:
             f.write(struct.pack('I', module['name'])) # name
             f.write(struct.pack('Q', module['imagebase'])) # imagebase
             f.write(struct.pack('I', module['imagesize'])) # imagesize
-            f.write(struct.pack('I', module['proc_num'])) # proc number
+            f.write(struct.pack('I', module['proc_num'])) # proc num
             f.write(struct.pack('I', module['procs'])) # proc
             
         
@@ -151,9 +151,7 @@ def main():
         
         
     print(f'hdmp file has been written to {sys.argv[2]}')
-    #print(compressed_module_name_table)
-    #print(module_name_table)
-    
+    return
     
 if __name__ == '__main__':
     main()

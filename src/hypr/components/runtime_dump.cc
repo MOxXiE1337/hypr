@@ -2,6 +2,7 @@
 
 #include <hyprfile/runtime_dump_file.h>
 #include <hyprutils/file.h>
+#include <hyprutils/resource.h>
 
 namespace hypr
 {
@@ -65,9 +66,25 @@ namespace hypr
         size_t size = 0;
         std::shared_ptr<uint8_t[]> buffer = hyprutils::ReadFileToMemory(path, &size);
 
-        if (!buffer)
+        if (!buffer || size == 0)
         {
             logman.Error("failed to read runtime dump file \"{}\"", path);
+            return false;
+        }
+
+        return LoadRuntimeDumpFileFromMemory(buffer.get(), size);
+    }
+
+    bool RuntimeDump::LoadRuntimeDumpFileFromResource(uint32_t id, const std::string& type)
+    {
+        hyprutils::LogManager& logman = GetLogManager();
+
+        size_t size = 0;
+        std::shared_ptr<uint8_t[]> buffer = hyprutils::ReadResourceToMemory(id, type, &size);
+
+        if (!buffer || size == 0)
+        {
+            logman.Error("failed to read runtime dump file from resource {}", id);
             return false;
         }
 
