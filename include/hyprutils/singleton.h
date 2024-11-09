@@ -1,6 +1,6 @@
 #pragma once
 
-namespace hyprutils
+namespace hyprutils 
 {
     template<typename T>
     class Singleton

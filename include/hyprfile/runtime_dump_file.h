@@ -1,7 +1,7 @@
 #pragma once
-#include "../hypr.h"
+#include "hyprfile.h"
 
-namespace hypr
+namespace hyprfile
 {
 	constexpr uint32_t kHDMPFileMagicNumber = 'PMDH';
 
@@ -33,17 +33,17 @@ namespace hypr
 
 #pragma pack()
 
-	class hdmp
+	class RuntimeDumpFile
 	{
 	public:
-		struct hdmp_proc
+		struct ProcRecord
 		{
 			uint32_t ordinal;
 			const char* name;
 			uint64_t address;
 		};
 
-		struct hdmp_module
+		struct ModuleRecord
 		{
 			const char* name;
 			uint64_t imagebase;
@@ -61,10 +61,11 @@ namespace hypr
 
 		bool Parse();
 	public:
-		bool Load(const char* path);
+		bool IsLoaded() { return buffer_ ? true : false; }
+		bool Load(const std::string& path);
 		bool Load(const void* data, size_t size);
 
-		void GetModules(std::vector<hdmp_module>& out);
-		void GetProcs(const hdmp_module& module, std::vector<hdmp_proc>& out);
+		void GetModuleRecords(std::vector<ModuleRecord>& out);
+		void GetProcRecords(const ModuleRecord& module, std::vector<ProcRecord>& out);
 	};
 }

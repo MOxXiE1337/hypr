@@ -1,5 +1,4 @@
 #pragma once
-#include "../hypr.h"
 
 #pragma warning(disable: 4200)
 

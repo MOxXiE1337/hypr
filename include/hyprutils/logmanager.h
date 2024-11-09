@@ -1,7 +1,10 @@
 #pragma once
-#include "hypr.h"
+#include <format>
+#include <string>
+#include <mutex>
+#include <iostream>
 
-namespace hypr
+namespace hyprutils
 {
 	class LogManager
 	{
@@ -10,6 +13,7 @@ namespace hypr
 		bool        should_log_;
 		std::mutex  lock_;
 	public:
+		LogManager() = delete;
 		LogManager(const std::string& name) : name_(name), should_log_(true) {}
 
 		void EnableLogging() { should_log_ = true; }

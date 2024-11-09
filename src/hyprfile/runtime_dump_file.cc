@@ -1,35 +1,23 @@
-#include <hypr/internal/hdmpfile.h>
+#include <hyprfile/runtime_dump_file.h>
 
-namespace hypr
+#include <hyprutils/file.h>
+
+namespace hyprfile
 {
-	bool hdmp::Load(const char* path)
+	bool RuntimeDumpFile::Load(const std::string& path)
 	{
 		if (buffer_)
 			return false;
 
-		std::ifstream file;
-		file.open(path, std::ios::binary);
+		buffer_ = hyprutils::ReadFileToMemory(path, &size_);
 
-		if (!file.is_open())
+		if (buffer_)
 			return false;
-
-		file.seekg(0, std::ios::end);
-		size_t file_size = file.tellg();
-		file.seekg(0);
-
-		if (file_size < sizeof(hdmpfile_t) + sizeof(hdmpmod_t) + sizeof(hdmpproc_t))
-			return false;
-
-		buffer_ = std::make_shared<uint8_t[]>(file_size);
-		size_ = file_size;
-
-		file.read(reinterpret_cast<char*>(buffer_.get()), size_);
-		file.close();
 
 		return Parse();
 	}
 
-	bool hdmp::Load(const void* data, size_t size)
+	bool RuntimeDumpFile::Load(const void* data, size_t size)
 	{
 		if (buffer_)
 			return false;
@@ -45,7 +33,7 @@ namespace hypr
 		return Parse();
 	}
 
-	bool hdmp::Parse()
+	bool RuntimeDumpFile::Parse()
 	{
 		if (!buffer_)
 			return false;
@@ -62,7 +50,7 @@ namespace hypr
 		return true;
 	}
 
-	void hdmp::GetModules(std::vector<hdmp_module>& out)
+	void RuntimeDumpFile::GetModuleRecords(std::vector<ModuleRecord>& out)
 	{
 		if (!buffer_)
 			return;
@@ -78,7 +66,7 @@ namespace hypr
 		for (size_t i = 0; i < header->module_number; i++)
 		{
 			out.push_back(
-				hdmp_module{
+				{
 					module_names + mod[i].name,
 					mod[i].imagebase,
 					mod[i].imagesize,
@@ -89,7 +77,7 @@ namespace hypr
 		}
 	}
 
-	void hdmp::GetProcs(const hdmp_module& module, std::vector<hdmp_proc>& out)
+	void RuntimeDumpFile::GetProcRecords(const ModuleRecord& module, std::vector<ProcRecord>& out)
 	{
 		if (!buffer_)
 			return;

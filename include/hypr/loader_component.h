@@ -1,6 +1,5 @@
 #pragma once
-
-#include "logman.h"
+#include <hyprutils/logmanager.h>
 
 namespace hypr
 {
@@ -10,7 +9,7 @@ namespace hypr
 	{
 	private:
 		Loader* loader_;
-		LogManager            logman_;
+		hyprutils::LogManager            logman_;
 	public:
 		LoaderComponent() = delete;
 		LoaderComponent(Loader* loader, const std::string& name) : loader_(loader), logman_(name) { }
@@ -20,7 +19,7 @@ namespace hypr
 			return *loader_;
 		}
 
-		LogManager& GetLogManager()
+		hyprutils::LogManager& GetLogManager()
 		{
 			return logman_;
 		}
