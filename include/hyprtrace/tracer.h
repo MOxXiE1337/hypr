@@ -12,6 +12,6 @@ namespace hyprtrace
 	private:
 
 	public:
-		void InitializeProcessStarter(hyprocess::ProcessStarter& starter, hyprfile::RuntimeDumpFile& runtime_dump_file);
+		static void InitializeProcessStarter(hyprocess::ProcessStarter& starter, hyprfile::RuntimeDumpFile& runtime_dump_file);
 	};
 }
