@@ -18,12 +18,14 @@ namespace hyprocess
 	private:
 		hyprutils::LogManager logman_;
 		std::string image_path_;
-		std::string cmdline_;
+		std::string cmd_parameters_;
 		std::vector<MemoryReservation> memory_reservations_;
 	public:
-		ProcessStarter(const std::string& image_path = "", const std::string& cmdline = "") : logman_("ProcessStarter"), image_path_(image_path), cmdline_(cmdline) {}
+		ProcessStarter(const std::string& image_path = "", const std::string& cmd_parameters = "") : logman_("ProcessStarter"), image_path_(image_path), cmd_parameters_(cmd_parameters) {}
+		
+		hyprutils::LogManager& GetLogManager() { return logman_; }
 		void SetImagePath(const std::string& image_path) { image_path_ = image_path; }
-		void SetCommandLine(const std::string& cmdline) { cmdline_ = cmdline; }
+		void SetCommandLineParameters(const std::string& cmd_parameters) { cmd_parameters_ = cmd_parameters; }
 		void ReserveMemory(uintptr_t address, size_t size, uint32_t protect, const std::string& comment = "");
 		bool StartProcess();
 	};

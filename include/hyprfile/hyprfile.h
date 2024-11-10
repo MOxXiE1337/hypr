@@ -10,7 +10,7 @@ namespace hyprfile
 	{
 	protected:
 		std::shared_ptr<uint8_t[]> buffer_;
-		size_t size_;
+		size_t size_{ 0 };
 
 	private:
 		virtual bool CheckValidity() = 0;

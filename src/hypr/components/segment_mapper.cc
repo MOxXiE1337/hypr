@@ -31,13 +31,7 @@ namespace hypr
 				return false;
 			}
 			
-			// alignment calculation
-			SYSTEM_INFO si{ 0 };
-			GetSystemInfo(&si);
-			size_t pagesize = si.dwPageSize;
-			size_t aligned_size = (segment->vsize <= pagesize) ? pagesize : ((segment->vsize % pagesize == 0) ? segment->vsize / pagesize : segment->vsize / pagesize + 1) * pagesize;
-
-			if (mbi.RegionSize != aligned_size)
+			if (mbi.RegionSize < segment->vsize)
 			{
 				logman.Error("memory reserverd for seg{} {:X} is invalid", segment->ordinal, segment->address);
 				return false;

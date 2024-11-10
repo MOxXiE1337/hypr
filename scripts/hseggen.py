@@ -42,6 +42,8 @@ def main():
             print(f'skipping {name}')
             continue
         
+        print(f'packing {name}')
+        
         rsize = os.path.getsize(fullpath)
         
         segments.append({'ordinal': ordinal, 'address': address, 'vsize': vsize, 'rsize': rsize, 'data': len(raw_data)})

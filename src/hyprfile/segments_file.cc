@@ -41,7 +41,7 @@ namespace hyprfile
 		const hsegfile_t* header = reinterpret_cast<const hsegfile_t*>(data);
 		uint32_t          segment_num = header->segment_num;
 		const hsegseg_t*  segments = reinterpret_cast<const hsegseg_t*>(data + sizeof(hsegfile_t));
-		const uint8_t*       raw_data = reinterpret_cast<const uint8_t*>(data + sizeof(hsegfile_t) * segment_num);
+		const uint8_t*       raw_data = reinterpret_cast<const uint8_t*>(data + sizeof(hsegfile_t) + sizeof(hsegseg_t) * segment_num);
 
 		for (uint32_t i = 0; i < segment_num; i++)
 		{

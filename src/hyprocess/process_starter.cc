@@ -26,7 +26,7 @@ namespace hyprocess
 
 		BOOL success = CreateProcessA(
 			image_path_.c_str(),
-			const_cast<LPSTR>(cmdline_.c_str()),
+			const_cast<LPSTR>((image_path_ + " " + cmd_parameters_).c_str()),
 			nullptr,
 			nullptr,
 			FALSE,
@@ -59,9 +59,14 @@ namespace hyprocess
 				else
 					logman_.Error("failed to reserver memory {:X}:{:X} ({})", reservation.address, reservation.size, reservation.comment);
 				
-				TerminateProcess(pi.hProcess, -1);
-				return false;
+				//TerminateProcess(pi.hProcess, -1);
+				//return false;
+				continue;
 			}
+			if (reservation.comment.empty())
+				logman_.Log("reserved memory {:X}:{:X}", reservation.address, reservation.size);
+			else
+				logman_.Log("reserved memory {:X}:{:X} ({})", reservation.address, reservation.size, reservation.comment);
 		}
 
 		if (ResumeThread(pi.hThread) == FALSE)
