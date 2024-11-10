@@ -16,8 +16,8 @@ namespace hypr
 			return;
 
 		// map segments
-		//if (!GetSegmentMapper().MapSegments())
-		//	return;
+		if (!GetSegmentMapper().MapSegments())
+			return;
 
 		if (!PrevInvoke())
 			return;

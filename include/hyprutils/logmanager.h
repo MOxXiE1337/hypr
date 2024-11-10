@@ -30,24 +30,24 @@ namespace hyprutils
 			std::lock_guard guard{ lock_ };
 			if (!should_log_)
 				return;
-			std::print(std::cout, "\033[0m\033[1;33m");
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 14);
 			std::print(std::cout, "[{}] ", name_);
 			std::println(std::cout, fmt, std::forward<Args>(args)...);
-			std::print(std::cout, "\033[0m");
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 0x07);
 		}
 
 		template <typename... Args>
 		void Error(const std::format_string<Args...> fmt, Args&&... args) {
 			std::lock_guard guard{ lock_ };
+			SetConsoleTextAttribute(GetStdHandle(STD_ERROR_HANDLE), 12);
 #ifdef _DEBUG
-			std::print(std::cerr, "\033[0m\033[1;31m");
 			std::print(std::cerr, "[{}] ", name_);
 			std::println(std::cerr, fmt, std::forward<Args>(args)...);
-			std::print(std::cerr, "\033[0m");
+
 #else
 			MessageBoxA(NULL, std::format(fmt, std::forward<Args>(args)...).c_str(), "HYPR ERROR", MB_ICONERROR);
 #endif
-
+			SetConsoleTextAttribute(GetStdHandle(STD_ERROR_HANDLE), 0x07);
 		}
 
 	};

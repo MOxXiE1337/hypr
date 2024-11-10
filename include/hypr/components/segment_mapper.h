@@ -3,6 +3,7 @@
 #include "../loader_component.h"
 
 #include <hyprfile/segments_file.h>
+#include <hyprutils/search.h>
 
 namespace hypr
 {
@@ -15,11 +16,14 @@ namespace hypr
 
 	class SegmentMapper : public LoaderComponent
 	{
+	private:
+		friend Loader;
 	public:
 		struct Segment
 		{
 			uint32_t ordinal;
 			uintptr_t address;
+			uintptr_t mapped_address;
 			size_t vsize;
 			size_t rsize;
 			std::shared_ptr<uint8_t[]> data;
@@ -28,25 +32,45 @@ namespace hypr
 	private:
 		SegmentMapperMode mode_;
 		uintptr_t base_address_;
-		std::vector<Segment> segments_;
-		
 
+		std::vector<std::shared_ptr<Segment>> segments_;
+		
+		hyprutils::BSearch<AddressRange, Segment> segments_segaddr_search_;
+		hyprutils::BSearch<AddressRange, Segment> segments_mapaddr_search_;
+
+	private:
+		bool MapSegment(std::shared_ptr<Segment> segment);
+		bool MapSegments();
 	public:
 		SegmentMapper() = delete;
 		SegmentMapper(Loader* loader);
 
+		SegmentMapperMode GetMode() { return mode_; }
+		void SetMode(SegmentMapperMode mode) { mode_ = mode; }
+
 		uintptr_t GetBaseAddress() { return base_address_; }
 		void SetBaseAddress(uintptr_t address) { base_address_ = address; }
 
-		const std::vector<Segment>& GetSegments() { return segments_; }
+		const std::vector<std::shared_ptr<Segment>>& GetSegments() { return segments_; }
+	public:
+
+		std::shared_ptr<const Segment> FindSegmentBySegmentAddress(segaddr_t address); // use segment address to find segment
+		std::shared_ptr<const Segment> FindSegmentByAddress(uintptr_t address); // use mapped address to find segment
+
+		bool IsSegmentAddressInSegments(segaddr_t address); // check if the address is in segments
+		bool IsAddressInSegments(uintptr_t address); // check if the address is in mapped segments
 		
+	public:
 		// manually load a segment, useful when u only need one segment ( in code like bin.h )
 		bool LoadNativeSegment(const hyprfile::SegmentsFile::Segment& segment);
 
 		// .hseg file
 		bool LoadSegmentsFileFromMemory(const void* data, size_t size);
 		bool LoadSegmentsFileFromFile(const std::string& path);
-		bool LoadSegmentsFileFromResource(uint32_t id, const std::string& type);
+
+	public:
+		uintptr_t TranslateAddress(segaddr_t address); // translate segment address to mapped address
+		uintptr_t TranslateOffset(ptrdiff_t offset); // translate offset to mapped address (used when base address is set)
 	};
 }
 

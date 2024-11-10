@@ -1,6 +1,5 @@
 #include <hyprfile/segments_file.h>
 #include <hyprutils/file.h>
-#include <hyprutils/resource.h>
 
 namespace hyprfile
 {

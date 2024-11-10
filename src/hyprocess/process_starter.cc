@@ -44,13 +44,6 @@ namespace hyprocess
 			return false;
 		}
 		
-		if (ResumeThread(pi.hThread) == FALSE)
-		{
-			logman_.Error("failed to resume process");
-			logman_.Error("last error code: {:X}", GetLastError());
-			return false;
-		}
-
 		for (auto& reservation : memory_reservations_)
 		{
 			LPVOID ptr = VirtualAllocEx(pi.hProcess,
@@ -66,8 +59,17 @@ namespace hyprocess
 				else
 					logman_.Error("failed to reserver memory {:X}:{:X} ({})", reservation.address, reservation.size, reservation.comment);
 				
+				TerminateProcess(pi.hProcess, -1);
 				return false;
 			}
+		}
+
+		if (ResumeThread(pi.hThread) == FALSE)
+		{
+			logman_.Error("failed to resume process");
+			logman_.Error("last error code: {:X}", GetLastError());
+			TerminateProcess(pi.hProcess, -1);
+			return false;
 		}
 
 		logman_.Log("reserved {} memory pages", memory_reservations_.size());

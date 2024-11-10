@@ -19,7 +19,7 @@ namespace hyprutils
 		}
 
 		file.seekg(0, std::ios::end);
-		size = file.tellg();
+		size = size_t(file.tellg());
 		file.seekg(0);
 
 		std::shared_ptr<uint8_t[]> buffer = std::make_shared<uint8_t[]>(size);

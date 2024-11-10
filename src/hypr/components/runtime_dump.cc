@@ -2,7 +2,6 @@
 
 #include <hyprfile/runtime_dump_file.h>
 #include <hyprutils/file.h>
-#include <hyprutils/resource.h>
 
 namespace hypr
 {
@@ -10,31 +9,31 @@ namespace hypr
     {
     }
 
+    std::shared_ptr<const RuntimeDump::ModuleRecord> RuntimeDump::FindModuleRecord(segaddr_t address)
+    {
+        std::shared_ptr<ModuleRecord> module = modules_search_.Find(address);
+        return module;
+    }
+
     std::shared_ptr<const RuntimeDump::ProcRecord> RuntimeDump::FindProcRecord(segaddr_t address)
     {
         hyprutils::LogManager& logman = GetLogManager();
+        std::shared_ptr<ProcRecord> proc = procs_search_.Find(address);
 
-        auto it = gprocs_.find(address);
+        if (!proc)
+            return {};
 
-        if (it != gprocs_.end())
+        if (proc->new_address == 0)
         {
-            // delay load
-            std::shared_ptr<ProcRecord> proc = it->second;
-
+            std::shared_ptr<ModuleRecord> module = proc->module.lock();
+            proc->new_address = reinterpret_cast<uintptr_t>(GetProcAddress(LoadLibraryA(module->name.c_str()), proc->name.c_str()));
             if (proc->new_address == 0)
             {
-                proc->new_address = reinterpret_cast<uintptr_t>(GetProcAddress(LoadLibraryA(proc->module->name.c_str()), proc->name.c_str()));
-                if (proc->new_address == 0)
-                {
-                    logman.Error("failed to load proc {}.{}", proc->module->name, proc->name);
-                    return {};
-                }
+                logman.Error("failed to load proc {}.{}", module->name, proc->name);
+                return {};
             }
-
-            return proc;
         }
-
-        return {};
+        return proc;
     }
 
     bool RuntimeDump::LoadRuntimeDumpFileFromMemory(const void* data, size_t size)
@@ -52,7 +51,7 @@ namespace hypr
             {
                 std::shared_ptr<ModuleRecord> mod = std::make_shared<ModuleRecord>();
                 mod->name = module.name;
-                mod->imagebase = module.imagebase;
+                mod->imagebase = uintptr_t(module.imagebase);
                 mod->imagesize = module.imagesize;
 
                 std::vector<hyprfile::RuntimeDumpFile::ProcRecord> procs;
@@ -66,11 +65,12 @@ namespace hypr
                         0,
                         hproc.name);
 
+                    procs_.push_back(proc);
+                    procs_search_.AddElement(uintptr_t(hproc.address), proc);
                     mod->procs.push_back(proc);
-                    gprocs_[hproc.address] = proc;
                 }
                 modules_.push_back(mod);
-                
+                modules_search_.AddElement({ uintptr_t(module.imagebase), module.imagesize }, mod);
             };
 
         std::vector<hyprfile::RuntimeDumpFile::ModuleRecord> modules;
@@ -102,20 +102,5 @@ namespace hypr
         return LoadRuntimeDumpFileFromMemory(buffer.get(), size);
     }
 
-    bool RuntimeDump::LoadRuntimeDumpFileFromResource(uint32_t id, const std::string& type)
-    {
-        hyprutils::LogManager& logman = GetLogManager();
-
-        size_t size = 0;
-        std::shared_ptr<uint8_t[]> buffer = hyprutils::ReadResourceToMemory(id, type, &size);
-
-        if (!buffer || size == 0)
-        {
-            logman.Error("failed to read runtime dump file from resource {}", id);
-            return false;
-        }
-
-        return LoadRuntimeDumpFileFromMemory(buffer.get(), size);
-    }
 }
 

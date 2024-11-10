@@ -20,7 +20,6 @@ namespace hyprfile
 		bool IsLoaded() { return buffer_ ? true : false; }
 		bool LoadFromFile(const std::string& path);
 		bool LoadFromMemory(const void* data, size_t size);
-		bool LoadFromResource(uint32_t id, const std::string& type);
 	};
 }
 
