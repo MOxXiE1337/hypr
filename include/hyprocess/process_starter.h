@@ -1,6 +1,8 @@
 #pragma once
 #include "hyprocess.h"
 #include <hyprutils/logmanager.h>
+#include <hyprfile/runtime_dump_file.h>
+#include <hyprfile/segments_file.h>
 
 namespace hyprocess
 {
@@ -12,7 +14,6 @@ namespace hyprocess
 			uintptr_t   address;
 			size_t      size;
 			uint32_t    protect;
-			std::string comment;
 		};
 
 	private:
@@ -26,7 +27,9 @@ namespace hyprocess
 		hyprutils::LogManager& GetLogManager() { return logman_; }
 		void SetImagePath(const std::string& image_path) { image_path_ = image_path; }
 		void SetCommandLineParameters(const std::string& cmd_parameters) { cmd_parameters_ = cmd_parameters; }
-		void ReserveMemory(uintptr_t address, size_t size, uint32_t protect, const std::string& comment = "");
-		bool StartProcess();
+		void ReserveMemory(uintptr_t address, size_t size, uint32_t protect);
+		void ReserveMemoryFromRuntimeDumpFile(hyprfile::RuntimeDumpFile& runtime_dump_file);
+		void ReserveMemoryFromSegmentsFile(hyprfile::SegmentsFile& segments_file);
+		HANDLE StartProcess();
 	};
 }

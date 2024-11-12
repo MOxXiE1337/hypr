@@ -5,6 +5,20 @@
 
 namespace hypr
 {
+
+    bool RuntimeDump::ProcRecord::LoadProc()
+    {
+        if (new_address != 0)
+            return true;
+
+        std::shared_ptr<ModuleRecord> module = this->module.lock();
+        new_address = reinterpret_cast<uintptr_t>(GetProcAddress(LoadLibraryA(module->name.c_str()), name.c_str()));
+
+        if (new_address == 0)
+            return false;
+        return true;
+    }
+
     RuntimeDump::RuntimeDump(Loader* loader) : LoaderComponent(loader, "RuntimeDump")
     {
     }
@@ -15,6 +29,16 @@ namespace hypr
         return module;
     }
 
+    std::shared_ptr<const RuntimeDump::ModuleRecord> RuntimeDump::FindModuleRecord(const std::string& name)
+    {
+        for (auto& module : modules_)
+        {
+            if (module->name == name)
+                return module;
+        }
+        return {};
+    }
+
     std::shared_ptr<const RuntimeDump::ProcRecord> RuntimeDump::FindProcRecord(segaddr_t address)
     {
         hyprutils::LogManager& logman = GetLogManager();
@@ -23,15 +47,9 @@ namespace hypr
         if (!proc)
             return {};
 
-        if (proc->new_address == 0)
+        if (!proc->LoadProc())
         {
-            std::shared_ptr<ModuleRecord> module = proc->module.lock();
-            proc->new_address = reinterpret_cast<uintptr_t>(GetProcAddress(LoadLibraryA(module->name.c_str()), proc->name.c_str()));
-            if (proc->new_address == 0)
-            {
-                logman.Error("failed to load proc {}.{}", module->name, proc->name);
-                return {};
-            }
+            logman.Error("failed to load proc {}!{}", proc->module.lock()->name, proc->name);
         }
         return proc;
     }
@@ -62,6 +80,7 @@ namespace hypr
                     std::shared_ptr<ProcRecord> proc = std::make_shared<ProcRecord>(
                         mod,
                         hproc.ordinal,
+                        hproc.address,
                         0,
                         hproc.name);
 

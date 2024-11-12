@@ -15,8 +15,11 @@ namespace hypr
 		{
 			std::weak_ptr<ModuleRecord> module;
 			uint32_t ordinal;
+			uintptr_t address;
 			uintptr_t new_address; // new address by GetProcAddress
 			std::string name;
+			
+			bool LoadProc();
 		};
 
 		struct ModuleRecord
@@ -42,6 +45,7 @@ namespace hypr
 		const std::vector<std::shared_ptr<ProcRecord>>& GetProcRecords() { return procs_; }
 		
 		std::shared_ptr<const RuntimeDump::ModuleRecord> FindModuleRecord(segaddr_t address);
+		std::shared_ptr<const RuntimeDump::ModuleRecord> FindModuleRecord(const std::string& name); // slow
 		std::shared_ptr<const RuntimeDump::ProcRecord> FindProcRecord(segaddr_t address);
 
 		// .hdmp file 

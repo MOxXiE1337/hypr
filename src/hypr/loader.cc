@@ -3,6 +3,7 @@
 namespace hypr
 {
 	Loader::Loader(const std::string& name) : 
+		name_(name),
 		logman_(name),
 		runtime_dump_(this),
 		segment_mapper_(this)
@@ -12,15 +13,31 @@ namespace hypr
 
 	void Loader::Load()
 	{
+
+		static auto print_exiting_msg = [this]()
+			{
+				hyprutils::LogManager& logman = GetLogManager();
+				logman.Log("failed to load {}, exiting...", GetName());
+			};
+
 		if (!PrevMap())
+		{
+			print_exiting_msg();
 			return;
+		}
 
 		// map segments
 		if (!GetSegmentMapper().MapSegments())
+		{
+			print_exiting_msg();
 			return;
+		}
 
 		if (!PrevInvoke())
+		{
+			print_exiting_msg();
 			return;
+		}
 
 		// rebuild iat and relocs
 
@@ -28,10 +45,16 @@ namespace hypr
 
 
 		if (!Invoke())
+		{
+			print_exiting_msg();
 			return;
+		}
 
 		if (!AfterInvoke())
+		{
+			print_exiting_msg();
 			return;
+		}
 	}
 
 

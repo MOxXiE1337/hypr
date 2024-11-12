@@ -65,7 +65,7 @@ namespace hyprfile
 		{
 			const hdmpproc_t& proc = module.procs[i];
 			if(proc.name == 0)
-				out.push_back({ proc.ordinal,"NONE", proc.address});
+				out.push_back({ proc.ordinal,"", proc.address});
 			else
 				out.push_back({ proc.ordinal,proc_names + proc.name, proc.address });
 		}
