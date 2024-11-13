@@ -69,13 +69,13 @@ namespace hypr
 	{
 	}
 
-	std::shared_ptr<const SegmentMapper::Segment> SegmentMapper::FindSegmentBySegmentAddress(segaddr_t address)
+	std::shared_ptr<SegmentMapper::Segment> SegmentMapper::FindSegmentBySegmentAddress(segaddr_t address)
 	{
-		std::shared_ptr<const Segment> segment = segments_segaddr_search_.Find(address);
+		std::shared_ptr<Segment> segment = segments_segaddr_search_.Find(address);
 		return segment;
 	}
 
-	std::shared_ptr<const SegmentMapper::Segment> SegmentMapper::FindSegmentByAddress(uintptr_t address)
+	std::shared_ptr<SegmentMapper::Segment> SegmentMapper::FindSegmentByAddress(uintptr_t address)
 	{
 		std::shared_ptr<Segment> segment = segments_mapaddr_search_.Find({ address });
 		return segment;

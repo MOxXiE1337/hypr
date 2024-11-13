@@ -4,13 +4,28 @@
 
 namespace hyprtrace
 {
-
-	class ExecutionBreakPointTracer
+	class ExecutionTracer
 	{
 	public:
+		enum class ExecutionTraceStatus
+		{
+			kContinueTracing,
+			kStopTracing,
+			kStopTracingAndSuspend,
+			kStopExecution
+		};
+
+		using ExecutionTraceHandler = std::function<ExecutionTraceStatus(hyprutils::LogManager*, PCONTEXT)>;
 		using ExecutionBreakPointHandler = std::function<void(hyprutils::LogManager*, PCONTEXT)>;
 
 	private:
+
+		struct ExecutionTrace
+		{
+			uint32_t thread_id;
+			ExecutionTraceHandler handler;
+		};
+
 		struct ExecutionBreakPoint
 		{
 			uintptr_t original_insn_address;
@@ -29,6 +44,8 @@ namespace hyprtrace
 	private:
 		static hyprutils::LogManager logman_;
 		static bool inited_;
+
+		static std::unordered_map<uint32_t, ExecutionTrace> traced_threads_;
 		static std::unordered_map<uintptr_t, ExecutionBreakPoint> execution_breakpoints_;
 		static std::vector<ShellCodePage> shellcode_pages_;
 
@@ -38,6 +55,10 @@ namespace hyprtrace
 		static hyprutils::LogManager& GetLogManager();
 
 		static bool Initialize();
+		// return -1 if failed
+		static uint32_t StartTracingAt(uintptr_t address, ExecutionTraceHandler handler, void* parameter = nullptr);
+		static bool StopTracing(uint32_t thread_id);
+		static bool StopExecution(uint32_t thread_id);
 		static bool AddExecutionBreakPoint(uintptr_t address, size_t insn_len, ExecutionBreakPointHandler prev_exec_handler, ExecutionBreakPointHandler after_exec_handler);
 		static bool RemoveExecutionBreakPoint(uintptr_t address);
 	};

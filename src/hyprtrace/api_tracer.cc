@@ -5,9 +5,12 @@ namespace hyprtrace
 	hypr::Loader* ApiTracer::loader_ = nullptr;
 	hyprutils::LogManager ApiTracer::logman_{ "ApiTracer" };
 
+	std::unordered_map<hypr::segaddr_t, uintptr_t> ApiTracer::exception_api_hooks_;
+	std::unordered_map<hypr::segaddr_t, uintptr_t> ApiTracer::inline_api_hooks_;
+
 	bool ApiTracer::should_log_ = true;
 	std::unordered_map<std::string, bool> ApiTracer::filtered_modules_;
-	std::unordered_map<uintptr_t, bool> ApiTracer::filtered_apis_by_address_;
+	std::unordered_map<hypr::segaddr_t, bool> ApiTracer::filtered_apis_by_address_;
 	std::unordered_map<std::string, bool> ApiTracer::filtered_apis_by_name_;
 
 	LONG NTAPI ApiTracer::ExceptionHandler(struct _EXCEPTION_POINTERS* exception)
@@ -29,6 +32,7 @@ namespace hyprtrace
 			if (proc)
 			{
 				std::shared_ptr<hypr::RuntimeDump::ModuleRecord> module = proc->module.lock();
+				std::string fullname = module->name + "!" + proc->name;
 
 				bool filtered = false;
 				// filtering by module
@@ -45,7 +49,7 @@ namespace hyprtrace
 				}
 				// filtering by name
 				{
-					auto it = filtered_apis_by_name_.find(module->name + "!" + proc->name);
+					auto it = filtered_apis_by_name_.find(fullname);
 					if (it != filtered_apis_by_name_.end())
 						filtered = true;
 				}
@@ -53,11 +57,27 @@ namespace hyprtrace
 				if (should_log_ && !filtered)
 					logman.Log("{:X} -> {:X} {}!{} (return to {:X})", address, proc->new_address, module->name, proc->name, return_address);
 		
+				
+
 #ifdef _WIN64
 				exception->ContextRecord->Rip = proc->new_address;
 #else
 				exception->ContextRecord->Eip = proc->new_address;
 #endif
+				
+				// exception hook
+				{
+					auto it = exception_api_hooks_.find(address);
+					if (it != exception_api_hooks_.end())
+					{
+#ifdef _WIN64
+						exception->ContextRecord->Rip = it->second;
+#else
+						exception->ContextRecord->Eip = it->second;
+#endif
+					}
+				}
+
 				return EXCEPTION_CONTINUE_EXECUTION;
 			}
 
@@ -167,7 +187,7 @@ namespace hyprtrace
 		return true;
 	}
 
-	bool ApiTracer::AddFilteringApi(uintptr_t address)
+	bool ApiTracer::AddFilteringApi(hypr::segaddr_t address)
 	{
 		hyprutils::LogManager& logman = GetLogManager();
 
@@ -209,7 +229,7 @@ namespace hyprtrace
 		return true;
 	}
 
-	bool ApiTracer::RemoveFilteringApi(uintptr_t address) 
+	bool ApiTracer::RemoveFilteringApi(hypr::segaddr_t address)
 	{
 		hyprutils::LogManager& logman = GetLogManager();
 
@@ -250,6 +270,198 @@ namespace hyprtrace
 
 		logman.Log("removed filtering api {}", name);
 		filtered_apis_by_name_.erase(it);
+		return true;
+	}
+
+	bool ApiTracer::SetApiExceptionHook(const std::string& module_name, const std::string& proc_name, void* detour)
+	{
+		hyprutils::LogManager& logman = GetLogManager();
+
+		if (loader_ == nullptr)
+		{
+			logman.Error("api tracer is not initialized");
+			return false;
+		}
+
+		if (detour == nullptr)
+		{
+			logman.Error("arg detour can not be nullptr", detour);
+			return false;
+		}
+
+		std::shared_ptr<hypr::RuntimeDump::ModuleRecord> module = loader_->GetRuntimeDump().FindModuleRecord(module_name);
+
+		if (!module)
+		{
+			logman.Error("module {} not found in runtime dump", module_name);
+			return false;
+		}
+
+		std::shared_ptr<hypr::RuntimeDump::ProcRecord> proc = module->procs_name_search.Find(proc_name);
+
+		if (!proc)
+		{
+			logman.Error("proc {} not found in runtime dump", proc_name);
+			return false;
+		}
+
+		hypr::segaddr_t address = proc->address;
+
+		if (exception_api_hooks_.find(address) != exception_api_hooks_.end() || inline_api_hooks_.find(address) != inline_api_hooks_.end())
+		{
+			logman.Error("{}!{} is already hooked", module_name, proc_name);
+			return false;
+		}
+
+		AddFilteringApi(module_name + "!" + proc_name);
+		exception_api_hooks_.insert({ address, reinterpret_cast<uintptr_t>(detour) });
+
+		return true;
+	}
+
+	bool ApiTracer::SetApiInlineHook(const std::string& module_name, const std::string& proc_name, void* detour)
+	{
+		hyprutils::LogManager& logman = GetLogManager();
+
+		if (loader_ == nullptr)
+		{
+			logman.Error("api tracer is not initialized");
+			return false;
+		}
+
+		if (detour == nullptr)
+		{
+			logman.Error("arg detour can not be nullptr", detour);
+			return false;
+		}
+
+		std::shared_ptr<hypr::RuntimeDump::ModuleRecord> module = loader_->GetRuntimeDump().FindModuleRecord(module_name);
+
+		if (!module)
+		{
+			logman.Error("module {} not found in runtime dump", module_name);
+			return false;
+		}
+
+		std::shared_ptr<hypr::RuntimeDump::ProcRecord> proc = module->procs_name_search.Find(proc_name);
+
+		if (!proc)
+		{
+			logman.Error("proc {} not found in runtime dump", proc_name);
+			return false;
+		}
+
+		hypr::segaddr_t address = proc->address;
+
+		if (exception_api_hooks_.find(address) != exception_api_hooks_.end() || inline_api_hooks_.find(address) != inline_api_hooks_.end())
+		{
+			logman.Error("{}!{} is already hooked", module_name, proc_name);
+			return false;
+		}
+
+#ifdef _WIN64
+		size_t hook_len = 14;
+		size_t address_offfset = 6;
+#else
+		size_t hook_len = 6;
+		size_t address_offset = 2;
+#endif
+
+		DWORD old_protect;
+		if (!VirtualProtect(reinterpret_cast<void*>(address), hook_len, PAGE_EXECUTE_READWRITE, &old_protect))
+		{
+			logman_.Error("failed to modify page protection at {:X}", address);
+			return false;
+		}
+
+		memset(reinterpret_cast<void*>(address), 0x00, 6);
+		*reinterpret_cast<uint16_t*>(address) = 0x25FF;
+		*reinterpret_cast<void**>(address + address_offfset) = detour;
+
+		if (!VirtualProtect(reinterpret_cast<void*>(address), hook_len, old_protect, &old_protect))
+		{
+			logman_.Error("failed to restore page protection at {:X}", address);
+			return false;
+		}
+
+		inline_api_hooks_.insert({ address, reinterpret_cast<uintptr_t>(detour) });
+
+		return true;
+	}
+
+	bool ApiTracer::RemoveApiHook(const std::string& module_name, const std::string& proc_name)
+	{
+		hyprutils::LogManager& logman = GetLogManager();
+
+		if (loader_ == nullptr)
+		{
+			logman.Error("api tracer is not initialized");
+			return false;
+		}
+
+		std::shared_ptr<hypr::RuntimeDump::ModuleRecord> module = loader_->GetRuntimeDump().FindModuleRecord(module_name);
+
+		if (!module)
+		{
+			logman.Error("module {} not found in runtime dump", module_name);
+			return false;
+		}
+
+		std::shared_ptr<hypr::RuntimeDump::ProcRecord> proc = module->procs_name_search.Find(proc_name);
+
+		if (!proc)
+		{
+			logman.Error("proc {} not found in runtime dump", proc_name);
+			return false;
+		}
+
+		hypr::segaddr_t address = proc->address;
+
+		if (exception_api_hooks_.find(address) == exception_api_hooks_.end() && inline_api_hooks_.find(address) == inline_api_hooks_.end())
+		{
+			logman.Error("{}!{} is not hooked", module_name, proc_name);
+			return false;
+		}
+
+		// exception hook
+		{
+			auto it = exception_api_hooks_.find(address);
+			if (it != exception_api_hooks_.end())
+			{
+				exception_api_hooks_.erase(it); 
+				RemoveFilteringApi(module_name + "!" + proc_name);
+			}
+		}
+		// inline hook
+		{
+			auto it = inline_api_hooks_.find(address);
+			if (it != inline_api_hooks_.end())
+			{
+#ifdef _WIN64
+				size_t hook_len = 14;
+#else
+				size_t hook_len = 6;
+#endif
+
+				DWORD old_protect;
+				if (!VirtualProtect(reinterpret_cast<void*>(address), hook_len, PAGE_EXECUTE_READWRITE, &old_protect))
+				{
+					logman_.Error("failed to modify page protection at {:X}", address);
+					return false;
+				}
+
+				memset(reinterpret_cast<void*>(address), 0xF4, hook_len); // hlt
+				
+				if (!VirtualProtect(reinterpret_cast<void*>(address), hook_len, old_protect, &old_protect))
+				{
+					logman_.Error("failed to restore page protection at {:X}", address);
+					return false;
+				}
+
+				inline_api_hooks_.erase(it);
+			}
+		}
+
 		return true;
 	}
 

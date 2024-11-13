@@ -23,23 +23,17 @@ namespace hypr
     {
     }
 
-    std::shared_ptr<const RuntimeDump::ModuleRecord> RuntimeDump::FindModuleRecord(segaddr_t address)
+    std::shared_ptr<RuntimeDump::ModuleRecord> RuntimeDump::FindModuleRecord(segaddr_t address)
     {
-        std::shared_ptr<ModuleRecord> module = modules_search_.Find(address);
-        return module;
+        return modules_address_search_.Find(address);
     }
 
-    std::shared_ptr<const RuntimeDump::ModuleRecord> RuntimeDump::FindModuleRecord(const std::string& name)
+    std::shared_ptr<RuntimeDump::ModuleRecord> RuntimeDump::FindModuleRecord(const std::string& name)
     {
-        for (auto& module : modules_)
-        {
-            if (module->name == name)
-                return module;
-        }
-        return {};
+        return modules_name_search_.Find(name);
     }
 
-    std::shared_ptr<const RuntimeDump::ProcRecord> RuntimeDump::FindProcRecord(segaddr_t address)
+    std::shared_ptr<RuntimeDump::ProcRecord> RuntimeDump::FindProcRecord(segaddr_t address)
     {
         hyprutils::LogManager& logman = GetLogManager();
         std::shared_ptr<ProcRecord> proc = procs_search_.Find(address);
@@ -87,9 +81,11 @@ namespace hypr
                     procs_.push_back(proc);
                     procs_search_.AddElement(uintptr_t(hproc.address), proc);
                     mod->procs.push_back(proc);
+                    mod->procs_name_search.AddElement(hproc.name, proc);
                 }
                 modules_.push_back(mod);
-                modules_search_.AddElement({ uintptr_t(module.imagebase), module.imagesize }, mod);
+                modules_address_search_.AddElement({ uintptr_t(module.imagebase), module.imagesize }, mod);
+                modules_name_search_.AddElement(module.name, mod);
             };
 
         std::vector<hyprfile::RuntimeDumpFile::ModuleRecord> modules;

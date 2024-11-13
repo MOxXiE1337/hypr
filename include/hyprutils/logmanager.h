@@ -41,12 +41,10 @@ namespace hyprutils
 			std::lock_guard guard{ lock_ };
 			SetConsoleTextAttribute(GetStdHandle(STD_ERROR_HANDLE), 12);
 
+			std::string errmsg = std::format(fmt, std::forward<Args>(args)...);
 			std::print(std::cerr, "[{}] ", name_);
-			std::println(std::cerr, fmt, std::forward<Args>(args)...);
+			std::println(std::cerr, "{}", errmsg);
 
-#ifdef NDEBUG
-			MessageBoxA(NULL, std::format(fmt, std::forward<Args>(args)...).c_str(), "HYPR ERROR", MB_ICONERROR);
-#endif
 			SetConsoleTextAttribute(GetStdHandle(STD_ERROR_HANDLE), 0x07);
 		}
 

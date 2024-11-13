@@ -51,11 +51,11 @@ namespace hypr
 		uintptr_t GetBaseAddress() { return base_address_; }
 		void SetBaseAddress(uintptr_t address) { base_address_ = address; }
 
-		const std::vector<std::shared_ptr<Segment>>& GetSegments() { return segments_; }
+		std::vector<std::shared_ptr<Segment>>& GetSegments() { return segments_; }
 	public:
 
-		std::shared_ptr<const Segment> FindSegmentBySegmentAddress(segaddr_t address); // use segment address to find segment
-		std::shared_ptr<const Segment> FindSegmentByAddress(uintptr_t address); // use mapped address to find segment
+		std::shared_ptr<Segment> FindSegmentBySegmentAddress(segaddr_t address); // use segment address to find segment
+		std::shared_ptr<Segment> FindSegmentByAddress(uintptr_t address); // use mapped address to find segment
 
 		bool IsSegmentAddressInSegments(segaddr_t address); // check if the address is in segments
 		bool IsAddressInSegments(uintptr_t address); // check if the address is in mapped segments

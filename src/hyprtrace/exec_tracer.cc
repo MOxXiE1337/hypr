@@ -1,13 +1,15 @@
-#include <hyprtrace/execbp_tracer.h>
+#include <hyprtrace/exec_tracer.h>
 
 namespace hyprtrace
 {
-	hyprutils::LogManager ExecutionBreakPointTracer::logman_{ "ExecBpTracer" };
-	bool ExecutionBreakPointTracer::inited_ = false;
-	std::unordered_map<uintptr_t, ExecutionBreakPointTracer::ExecutionBreakPoint> ExecutionBreakPointTracer::execution_breakpoints_;
-	std::vector<ExecutionBreakPointTracer::ShellCodePage> ExecutionBreakPointTracer::shellcode_pages_;
+	hyprutils::LogManager ExecutionTracer::logman_{ "ExecutionTracer" };
+	bool ExecutionTracer::inited_ = false;
 
-	ExecutionBreakPointTracer::ShellCodePage* ExecutionBreakPointTracer::CreateShellCodePage()
+	std::unordered_map<uint32_t, ExecutionTracer::ExecutionTrace> ExecutionTracer::traced_threads_;
+	std::unordered_map<uintptr_t, ExecutionTracer::ExecutionBreakPoint> ExecutionTracer::execution_breakpoints_;
+	std::vector<ExecutionTracer::ShellCodePage> ExecutionTracer::shellcode_pages_;
+
+	ExecutionTracer::ShellCodePage* ExecutionTracer::CreateShellCodePage()
 	{
 		hyprutils::LogManager& logman = GetLogManager();
 
@@ -26,7 +28,7 @@ namespace hyprtrace
 		return &shellcode_pages_.back();
 	}
 
-	LONG NTAPI ExecutionBreakPointTracer::ExceptionHandler(struct _EXCEPTION_POINTERS* exception)
+	LONG NTAPI ExecutionTracer::ExceptionHandler(struct _EXCEPTION_POINTERS* exception)
 	{
 		hyprutils::LogManager& logman = GetLogManager();
 		uint32_t code = exception->ExceptionRecord->ExceptionCode;
@@ -62,7 +64,7 @@ namespace hyprtrace
 
 #ifdef _WIN64
 				// not modified by handler
-				if(rip == exception->ContextRecord->Rip)
+				if (rip == exception->ContextRecord->Rip)
 					exception->ContextRecord->Rip = bp.original_insn_address;
 #else
 				if (eip == exception->ContextRecord->Eip)
@@ -87,18 +89,18 @@ namespace hyprtrace
 		return EXCEPTION_CONTINUE_SEARCH;
 	}
 
-	hyprutils::LogManager& ExecutionBreakPointTracer::GetLogManager()
+	hyprutils::LogManager& ExecutionTracer::GetLogManager()
 	{
 		return logman_;
 	}
 
-	bool ExecutionBreakPointTracer::Initialize()
+	bool ExecutionTracer::Initialize()
 	{
 		hyprutils::LogManager& logman = GetLogManager();
 
 		if (inited_)
 		{
-			logman.Error("execution breakpoint tracer is already intiialized");
+			logman.Error("execution tracer is already intiialized");
 			return false;
 		}
 
@@ -107,12 +109,87 @@ namespace hyprtrace
 
 		AddVectoredExceptionHandler(TRUE, ExceptionHandler);
 
+		inited_ = true;
+
 		return true;
 	}
 
-	bool ExecutionBreakPointTracer::AddExecutionBreakPoint(uintptr_t address, size_t insn_len, ExecutionBreakPointHandler prev_exec_handler, ExecutionBreakPointHandler after_exec_handler)
+	uint32_t ExecutionTracer::StartTracingAt(uintptr_t address, ExecutionTraceHandler handler, void* parameter)
 	{
 		hyprutils::LogManager& logman = GetLogManager();
+
+		if (!inited_)
+		{
+			logman.Error("execution tracer is not intiialized");
+			return false;
+		}
+
+		DWORD thread_id = -1;
+		HANDLE thread = CreateThread(nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(address), parameter, CREATE_SUSPENDED, &thread_id);
+
+		if (thread == NULL)
+		{
+			logman.Error("failed to create thread at {:X}, parameter: {:X}", address, reinterpret_cast<uintptr_t>(parameter));
+			return -1;
+		}
+
+		CONTEXT context{ 0 };
+		context.ContextFlags = CONTEXT_CONTROL;
+		if (!GetThreadContext(thread, &context))
+		{
+			logman.Error("failed to get thread context");
+			return -1;
+		}
+
+		context.EFlags |= 0x100; // TF
+
+		if (!SetThreadContext(thread, &context))
+		{
+			logman.Error("failed to set thread context");
+			return -1;
+		}
+
+		if (ResumeThread(thread) == -1)
+		{
+			logman.Error("failed to resume thread");
+			return -1;
+		}
+
+		traced_threads_.insert({ thread_id,{ thread_id, handler } });
+
+		return thread_id;
+	}
+
+	bool ExecutionTracer::StopTracing(uint32_t thread_id)
+	{
+		hyprutils::LogManager& logman = GetLogManager();
+
+		if (!inited_)
+		{
+			logman.Error("execution tracer is not intiialized");
+			return false;
+		}
+
+		auto it = traced_threads_.find(thread_id);
+		if (it == traced_threads_.end())
+		{
+			logman.Error("thread {:X} is not traced");
+			return false;
+		}
+
+		traced_threads_.erase(it);
+
+		return true;
+	}
+
+	bool ExecutionTracer::AddExecutionBreakPoint(uintptr_t address, size_t insn_len, ExecutionBreakPointHandler prev_exec_handler, ExecutionBreakPointHandler after_exec_handler)
+	{
+		hyprutils::LogManager& logman = GetLogManager();
+		if (!inited_)
+		{
+			logman.Error("execution tracer is not intiialized");
+			return false;
+		}
 
 		auto it = execution_breakpoints_.find(address);
 
@@ -183,10 +260,15 @@ namespace hyprtrace
 
 		return true;
 	}
-	
-	bool ExecutionBreakPointTracer::RemoveExecutionBreakPoint(uintptr_t address)
+
+	bool ExecutionTracer::RemoveExecutionBreakPoint(uintptr_t address)
 	{
 		hyprutils::LogManager& logman = GetLogManager();
+		if (!inited_)
+		{
+			logman.Error("execution tracer is not intiialized");
+			return false;
+		}
 
 		auto it = execution_breakpoints_.find(address);
 		if (it == execution_breakpoints_.end())
