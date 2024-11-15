@@ -17,7 +17,7 @@ namespace hypr
 		static auto print_exiting_msg = [this]()
 			{
 				hyprutils::LogManager& logman = GetLogManager();
-				logman.Log("failed to load {}, exiting...", GetName());
+				logman.Error("failed to load {}, exiting...", GetName());
 			};
 
 		if (!PrevMap())

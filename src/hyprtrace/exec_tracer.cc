@@ -86,6 +86,51 @@ namespace hyprtrace
 			return EXCEPTION_CONTINUE_EXECUTION; // continue execution
 		}
 
+		if (code == EXCEPTION_SINGLE_STEP)
+		{
+			DWORD id = GetCurrentThreadId();
+			auto it = traced_threads_.find(id);
+
+			if (it != traced_threads_.end())
+			{
+				ExecutionTrace& trace = it->second;
+				ExecutionTraceStatus status = trace.handler(&logman, exception->ContextRecord);
+
+				switch (status)
+				{
+				case hyprtrace::ExecutionTracer::ExecutionTraceStatus::kContinueTracing:
+					exception->ContextRecord->EFlags |= 0x100;
+
+					if (trace.prev_executed_address != 0)
+					{
+#ifdef _WIN64
+						if (*reinterpret_cast<uint8_t*>(trace.prev_executed_address) == 0x9C) // pushfq
+						{
+							*reinterpret_cast<uint64_t*>(exception->ContextRecord->Rsp) &= ~(uint64_t)0x100;
+							logman.Log("spoofed pushfq at {:X}", trace.prev_executed_address);
+						}
+#endif
+					}
+#ifdef _WIN64
+					trace.prev_executed_address = exception->ContextRecord->Rip;
+#else
+					trace.prev_executed_address = exception->ContextRecord->Eip;
+#endif
+					return EXCEPTION_CONTINUE_EXECUTION;
+				case hyprtrace::ExecutionTracer::ExecutionTraceStatus::kStopTracing:
+					return EXCEPTION_CONTINUE_EXECUTION;
+				case hyprtrace::ExecutionTracer::ExecutionTraceStatus::kStopExecution:
+					ExitThread(0);
+					break;
+				default:
+					logman.Error("handler tracing thread {} returned unknown trace status", id);
+					return EXCEPTION_CONTINUE_SEARCH;
+				}
+			}
+
+			return EXCEPTION_CONTINUE_SEARCH;
+		}
+
 		return EXCEPTION_CONTINUE_SEARCH;
 	}
 
@@ -155,31 +200,9 @@ namespace hyprtrace
 			return -1;
 		}
 
-		traced_threads_.insert({ thread_id,{ thread_id, handler } });
+		traced_threads_.insert({ thread_id,{ thread_id, 0, handler } });
 
 		return thread_id;
-	}
-
-	bool ExecutionTracer::StopTracing(uint32_t thread_id)
-	{
-		hyprutils::LogManager& logman = GetLogManager();
-
-		if (!inited_)
-		{
-			logman.Error("execution tracer is not intiialized");
-			return false;
-		}
-
-		auto it = traced_threads_.find(thread_id);
-		if (it == traced_threads_.end())
-		{
-			logman.Error("thread {:X} is not traced");
-			return false;
-		}
-
-		traced_threads_.erase(it);
-
-		return true;
 	}
 
 	bool ExecutionTracer::AddExecutionBreakPoint(uintptr_t address, size_t insn_len, ExecutionBreakPointHandler prev_exec_handler, ExecutionBreakPointHandler after_exec_handler)

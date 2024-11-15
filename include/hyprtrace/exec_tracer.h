@@ -11,7 +11,6 @@ namespace hyprtrace
 		{
 			kContinueTracing,
 			kStopTracing,
-			kStopTracingAndSuspend,
 			kStopExecution
 		};
 
@@ -23,6 +22,7 @@ namespace hyprtrace
 		struct ExecutionTrace
 		{
 			uint32_t thread_id;
+			uintptr_t prev_executed_address;
 			ExecutionTraceHandler handler;
 		};
 
@@ -56,9 +56,9 @@ namespace hyprtrace
 
 		static bool Initialize();
 		// return -1 if failed
+		// to stop tracing, plz return kStopTracing in the handler
 		static uint32_t StartTracingAt(uintptr_t address, ExecutionTraceHandler handler, void* parameter = nullptr);
-		static bool StopTracing(uint32_t thread_id);
-		static bool StopExecution(uint32_t thread_id);
+
 		static bool AddExecutionBreakPoint(uintptr_t address, size_t insn_len, ExecutionBreakPointHandler prev_exec_handler, ExecutionBreakPointHandler after_exec_handler);
 		static bool RemoveExecutionBreakPoint(uintptr_t address);
 	};
