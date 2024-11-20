@@ -50,11 +50,14 @@ def get_modules(dmp):
     return modules
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: python hdmpgen.py <path_to_dmp_file> <output_file_name>")
+    if len(sys.argv) < 3:
+        print("Usage: python hdmpgen.py <path_to_dmp_file> <output_file_name> [extract_dll0] [extract_dll1] ...")
         return
 
     dmp_file_path = sys.argv[1]
+    dll_filters = sys.argv[3:]
+    
+    print("filter:", dll_filters)
     
     if not os.path.isfile(dmp_file_path):
         print(f"file {dmp_file_path} does not exist.")
@@ -76,6 +79,10 @@ def main():
         if len(pe_bin) == 0:
             print(f'skipping {module["name"]}')
             continue
+            
+        if len(dll_filters) != 0:
+            if not module["name"] in dll_filters:
+                continue
             
         pe = pefile.PE(data=pe_bin, fast_load = True)
         pe.parse_data_directories(0)
