@@ -361,7 +361,7 @@ namespace hyprtrace
 
 #ifdef _WIN64
 		size_t hook_len = 14;
-		size_t address_offfset = 6;
+		size_t address_offset = 6;
 #else
 		size_t hook_len = 6;
 		size_t address_offset = 2;
@@ -376,7 +376,7 @@ namespace hyprtrace
 
 		memset(reinterpret_cast<void*>(address), 0x00, 6);
 		*reinterpret_cast<uint16_t*>(address) = 0x25FF;
-		*reinterpret_cast<void**>(address + address_offfset) = detour;
+		*reinterpret_cast<void**>(address + address_offset) = detour;
 
 		if (!VirtualProtect(reinterpret_cast<void*>(address), hook_len, old_protect, &old_protect))
 		{
